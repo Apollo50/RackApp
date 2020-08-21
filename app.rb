@@ -17,7 +17,7 @@ class App
     if time_format.valid?
       response(200, time_format.result)
     else
-      response(400, "Unknown time format [#{time_format.unknown_format_key.join(',')}]\n")
+      response(400, "Unknown time format [#{time_format.call.join(',')}]\n")
     end
   end
 

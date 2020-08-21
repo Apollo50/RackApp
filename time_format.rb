@@ -3,10 +3,7 @@ class TimeFormat
 
   def initialize(params)
     @params = params
-  end
-
-  def unknown_format_key
-    @params - TIME_KEY.keys
+    @invalid_params = unknown_format_key
   end
 
   def result
@@ -14,10 +11,18 @@ class TimeFormat
   end
 
   def valid?
-    unknown_format_key.empty?
+    @invalid_params.empty?
+  end
+
+  def call
+    @invalid_params
   end
 
   private
+
+  def unknown_format_key
+    @params - TIME_KEY.keys
+  end
 
   def time_by_format
     time = []
