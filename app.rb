@@ -1,58 +1,39 @@
-class App
-  TIME_KEY = %w(year month day hour minute second)
-  TIME_METHODS = {year: Time.now.year,
-                  month: Time.now.month,
-                  day: Time.now.day,
-                  hour: Time.now.hour,
-                  minute: Time.now.min,
-                  second: Time.now.sec}
+require './time_format'
 
+class App
   def call(env)
-    @query = env["QUERY_STRING"]
-    @path = env["REQUEST_PATH"]
-    @query_params = (Rack::Utils.parse_nested_query(@query)).values.join.split(",")
-    [status, headers, body]
+    request = Rack::Request.new(env)
+    if valid_path?(request) && !request_params(request).empty?
+      prepare_response(request)
+    else
+      response(404, "Invalid path or empty params\n")
+    end
   end
 
   private
 
-  def status
-    if unknown_format_key.empty? && valid_path?
-      200
-    elsif unknown_format_key.any? && valid_path?
-      400
+  def prepare_response(request)
+    time_format = TimeFormat.new(request_params(request))
+    if time_format.valid?
+      response(200, time_format.result)
     else
-      404
+      response(400, "Unknown time format [#{time_format.unknown_format_key.join(',')}]\n")
     end
   end
 
-  def headers
-    {'Content-type' => 'text/plain'}
+  def response(code, message)
+    response = Rack::Response.new
+    response.status = code
+    response['Content-type'] = 'text/plain'
+    response.write message
+    response.finish
   end
 
-  def body
-    if unknown_format_key.empty? && valid_path? && !@query_params.empty?
-      [time_by_format]
-    elsif unknown_format_key.any? && valid_path?
-      ["Unknown time format [#{unknown_format_key.join(',')}]\n"]
-    else
-      ["Invalid path or empty params\n"]
-    end
+  def request_params(request)
+    request.params['format'].split(',')
   end
 
-  def unknown_format_key
-    @query_params - TIME_KEY
-  end
-
-  def time_by_format
-    time = []
-    @query_params.each do |key|
-      time << TIME_METHODS[key.to_sym]
-    end
-    time.join('-') + "\n"
-  end
-
-  def valid_path?
-    @path == '/time'
+  def valid_path?(request)
+    request.path.match(/time/)
   end
 end
